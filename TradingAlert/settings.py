@@ -33,8 +33,8 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     'users.apps.UsersConfig',
     'alerts.apps.AlertsConfig',
-    # 'market_data.apps.MarketDataConfig',
-    # 'notifications.apps.NotificationsConfig',
+    'crispy_forms',
+    'crispy_bootstrap4',
     'dashboard.apps.DashboardConfig',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -122,7 +122,18 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+import os
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
+
+LOGIN_REDIRECT_URL = 'dashboard-home'
+LOGIN_URL='login'

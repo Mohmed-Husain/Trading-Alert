@@ -8,25 +8,25 @@
     <link rel="stylesheet" type="text/css" href="{% static 'blog/main.css' %}">
 
     {% if title %}
-        <title>Blog Home - {{ title }}</title>
+        <title> Trading View- {{ title }}</title>
     {% else %}
-        <title>Blog Home</title>
+        <title>Trading View</title>
     {% endif %}
 </head>
 <body>
     <header class="site-header">
         <nav class="navbar navbar-expand-md navbar-dark bg-steel fixed-top">
             <div class="container">
-                <a class="navbar-brand mr-4" href="#">Django Blog</a>
+                <a class="navbar-brand mr-4" href="{% url 'dashboard-home' %}">Trading View</a>
                 <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarToggle" aria-controls="navbarToggle" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarToggle">
                     <div class="navbar-nav mr-auto">
-                        <a class="nav-item nav-link" href="">Home</a>
+                        <a class="nav-item nav-link" href="{% url 'dashboard-home' %}">Home</a>
                         <a class="nav-item nav-link" href="">About</a>
                         <a class="nav-item nav-link" href="">Contact</a>
-                        <a class="nav-item nav-link" href="#">Profile</a>
+                        <a class="nav-item nav-link" href="{% url 'profile' %}">Profile</a>
                     </div>
                     <!-- Navbar Right Side -->
                     {%if user.is_authenticated%}
@@ -58,20 +58,6 @@
                     {% endfor %}
                 {% endif %}
                 {% block content %}{% endblock %}
-            </div>
-            <div class="col-md-4">
-                <div class="content-section">
-                    <h3>Our Sidebar</h3>
-                    <p class="text-muted">You can put any information here you'd like.</p>
-                    <ul class="list-group">
-                        <li class="list-group-item list-group-item-light">Latest Posts</li>
-                        <li class="list-group-item list-group-item-light">Announcements</li>
-                        <li class="list-group-item list-group-item-light">Calendars</li>
-                        <li class="list-group-item list-group-item-light">etc</li>
-                    </ul>
-                </div>
-                {% block Extra_block %}
-                {% endblock Extra_block %}
             </div>
         </div>
     </main>

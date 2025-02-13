@@ -6,5 +6,5 @@ from django.http import request
 
 
 urlpatterns=[
-    path('', views.home, name='home'),
+    path('', views.home, name='dashboard-home'),
     ]
