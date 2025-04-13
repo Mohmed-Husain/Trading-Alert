@@ -1,7 +1,97 @@
-from django.shortcuts import render
-from django.contrib.auth.mixins import LoginRequiredMixin,UserPassesTestMixin
-from django.http import request
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseForbidden
+from django.contrib import messages
+from .models import Alert, StockGroup
+from .forms import AlertForm, StockGroupForm
 
-
+@login_required
 def home(request):
-    return render(request, 'dashboard/home.html')
+    alerts = Alert.objects.filter(user=request.user)
+    stock_groups = StockGroup.objects.filter(user=request.user)
+
+    if request.method == 'POST':
+        form = AlertForm(request.POST, user=request.user)
+        if form.is_valid():
+            alert = form.save(commit=False)
+            alert.user = request.user  # Assign logged-in user
+            alert.save()
+            messages.success(request, 'Alert created successfully!')
+            return redirect('dashboard-home')  # Redirect to refresh alerts list
+
+    else:
+        form = AlertForm(user=request.user)
+
+    return render(request, 'dashboard/home.html', {
+        'alerts': alerts, 
+        'stock_groups': stock_groups,
+        'form': form
+    })
+
+@login_required
+def delete_alert(request, alert_id):
+    alert = get_object_or_404(Alert, id=alert_id)
+    
+    # Security check: ensure the user owns this alert
+    if alert.user != request.user:
+        return HttpResponseForbidden("You don't have permission to delete this alert.")
+    
+    # Delete the alert
+    alert.delete()
+    messages.success(request, 'Alert deleted successfully!')
+    
+    # Redirect back to the dashboard
+    return redirect('dashboard-home')
+
+@login_required
+def stock_group_list(request):
+    stock_groups = StockGroup.objects.filter(user=request.user)
+    return render(request, 'dashboard/stock_group_list.html', {'stock_groups': stock_groups})
+
+@login_required
+def stock_group_create(request):
+    if request.method == 'POST':
+        form = StockGroupForm(request.POST, user=request.user)
+        if form.is_valid():
+            group = form.save()
+            messages.success(request, f'Stock group "{group.name}" created successfully!')
+            return redirect('stock-group-list')
+    else:
+        form = StockGroupForm(user=request.user)
+    
+    return render(request, 'dashboard/stock_group_form.html', {'form': form, 'title': 'Create Stock Group'})
+
+@login_required
+def stock_group_update(request, group_id):
+    group = get_object_or_404(StockGroup, id=group_id)
+    
+    # Security check: ensure the user owns this group
+    if group.user != request.user:
+        return HttpResponseForbidden("You don't have permission to edit this stock group.")
+    
+    if request.method == 'POST':
+        form = StockGroupForm(request.POST, instance=group, user=request.user)
+        if form.is_valid():
+            group = form.save()
+            messages.success(request, f'Stock group "{group.name}" updated successfully!')
+            return redirect('stock-group-list')
+    else:
+        form = StockGroupForm(instance=group, user=request.user)
+    
+    return render(request, 'dashboard/stock_group_form.html', {'form': form, 'title': 'Update Stock Group'})
+
+@login_required
+def stock_group_delete(request, group_id):
+    group = get_object_or_404(StockGroup, id=group_id)
+    
+    # Security check: ensure the user owns this group
+    if group.user != request.user:
+        return HttpResponseForbidden("You don't have permission to delete this stock group.")
+    
+    if request.method == 'POST':
+        group_name = group.name
+        group.delete()
+        messages.success(request, f'Stock group "{group_name}" deleted successfully!')
+        return redirect('stock-group-list')
+    
+    return render(request, 'dashboard/stock_group_confirm_delete.html', {'group': group})

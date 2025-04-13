@@ -1,0 +1,18 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+{% block content %}
+
+<h2>Delete Stock Group</h2>
+
+<div class="alert alert-warning">
+    Are you sure you want to delete the stock group "{{ group.name }}"?<br>
+    This will not affect any existing alerts, but you won't be able to select this group for new alerts.
+</div>
+
+<form method="POST">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Delete</button>
+    <a href="{% url 'stock-group-list' %}" class="btn btn-secondary">Cancel</a>
+</form>
+
+{% endblock %} 

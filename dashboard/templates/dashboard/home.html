@@ -1,5 +1,7 @@
 {% extends 'dashboard/base.html' %}
+{% load static %}
 {% block content %}
+
 
 
 <div class="tradingview-widget-container mt-4">
@@ -23,12 +25,221 @@
     </script>
  </div> 
     
- {% comment %} <iframe src="https://www.investing.com/indices/" width="980" height="610"></iframe> {% endcomment %}
 
- {% comment %} <iframe src="https://gocharting.com/terminal?ticker=NSE:NIFTY"
-        width="100%" height="600px" frameborder="0">
-</iframe> {% endcomment %}
+ <div class="mb-4 mt-4">
+    <h2 class="d-inline-block">My Trading Alerts</h2>
+    <a href="{% url 'stock-group-list' %}" class="btn btn-primary float-right">
+        Manage Stock Groups
+    </a>
+</div>
 
-    
+{% if messages %}
+    <div class="messages mb-4">
+        {% for message in messages %}
+            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<!-- Alerts List -->
+<table border="1" class="table">
+    <thead>
+        <tr>
+            <th>Stock(s)</th>
+            <th>Indicator 1</th>
+            <th>Period</th>
+            <th>Condition</th>
+            <th>Indicator 2</th>
+            <th>Period</th>
+            <th>Timeframe</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for alert in alerts %}
+        <tr>
+            <td>
+                {% if alert.alert_type == 'single' %}
+                    {{ alert.stock.symbol }}
+                {% else %}
+                    <strong>Group:</strong> {{ alert.stock_group.name }}
+                    <button class="btn btn-sm btn-info" type="button" data-toggle="collapse" data-target="#stocks-{{ alert.id }}">
+                        Show {{ alert.stock_group.stocks.count }} stocks
+                    </button>
+                    <div class="collapse mt-2" id="stocks-{{ alert.id }}">
+                        <ul class="list-unstyled">
+                            {% for stock in alert.stock_group.stocks.all %}
+                                <li>{{ stock.symbol }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+            </td>
+            <td>{{ alert.indicator1.name }}</td>
+            <td>
+                {% with params=alert.indicator1_params|safe %}
+                    {% if '{"period":' in params %}
+                        {{ params|cut:'{"period":'|cut:'}' }}
+                    {% else %}
+                        {{ params }}
+                    {% endif %}
+                {% endwith %}
+            </td>
+            <td>{{ alert.condition }}</td>
+            <td>{{ alert.indicator2.name }}</td>
+            <td>
+                {% with params=alert.indicator2_params|safe %}
+                    {% if '{"period":' in params %}
+                        {{ params|cut:'{"period":'|cut:'}' }}
+                    {% else %}
+                        {{ params }}
+                    {% endif %}
+                {% endwith %}
+            </td>
+            <td>{{ alert.timeframe }}</td>
+            <td>{% if alert.is_active %}Active{% else %}Triggered{% endif %}</td>
+            <td>
+                <a href="{% url 'delete-alert' alert.id %}" 
+                   onclick="return confirm('Are you sure you want to delete this alert?');"
+                   style="background-color: #ff4d4d; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px;">
+                    Delete
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Alert Creation Form -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h3>Create New Alert</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <div class="form-group">
+                <label>Alert Type:</label>
+                <div>
+                    {{ form.alert_type }}
+                </div>
+                <small class="text-muted">{{ form.alert_type.help_text }}</small>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group col-md-6" id="single-stock-group">
+                    <label for="{{ form.stock.id_for_label }}">Stock:</label>
+                    {{ form.stock }}
+                    {% if form.stock.errors %}
+                        <div class="text-danger">
+                            {% for error in form.stock.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group col-md-6" id="stock-group-group" style="display: none;">
+                    <label for="{{ form.stock_group.id_for_label }}">Stock Group:</label>
+                    {{ form.stock_group }}
+                    {% if form.stock_group.errors %}
+                        <div class="text-danger">
+                            {% for error in form.stock_group.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if not stock_groups %}
+                        <small class="text-muted">
+                            No stock groups available. <a href="{% url 'stock-group-create' %}">Create a stock group</a> first.
+                        </small>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="{{ form.indicator1.id_for_label }}">Indicator 1:</label>
+                    {{ form.indicator1 }}
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="{{ form.period1.id_for_label }}">Period:</label>
+                    {{ form.period1 }}
+                    <small class="text-muted">{{ form.period1.help_text }}</small>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.condition.id_for_label }}">Condition:</label>
+                {{ form.condition }}
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="{{ form.indicator2.id_for_label }}">Indicator 2:</label>
+                    {{ form.indicator2 }}
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="{{ form.period2.id_for_label }}">Period:</label>
+                    {{ form.period2 }}
+                    <small class="text-muted">{{ form.period2.help_text }}</small>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.timeframe.id_for_label }}">Timeframe:</label>
+                {{ form.timeframe }}
+            </div>
+            
+            <!-- Hidden fields -->
+            {{ form.indicator1_params }}
+            {{ form.indicator2_params }}
+            
+            <button type="submit" class="btn btn-success">Save Alert</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Show/hide appropriate fields based on alert type selection
+    document.addEventListener('DOMContentLoaded', function() {
+        const alertTypeInputs = document.querySelectorAll('input[name="alert_type"]');
+        const singleStockGroup = document.getElementById('single-stock-group');
+        const stockGroupGroup = document.getElementById('stock-group-group');
+        
+        function updateVisibility() {
+            const selectedType = document.querySelector('input[name="alert_type"]:checked').value;
+            
+            if (selectedType === 'single') {
+                singleStockGroup.style.display = 'block';
+                stockGroupGroup.style.display = 'none';
+            } else {
+                singleStockGroup.style.display = 'none';
+                stockGroupGroup.style.display = 'block';
+            }
+        }
+        
+        // Initial setup
+        updateVisibility();
+        
+        // Update on change
+        alertTypeInputs.forEach(input => {
+            input.addEventListener('change', updateVisibility);
+        });
+    });
+</script>
 
 {% endblock %}
+    
