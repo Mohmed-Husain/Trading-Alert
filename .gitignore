@@ -1,0 +1,12 @@
+
+#os file 
+.env
+
+
+#databse file
+# SQLite database file
+db.sqlite3
+
+
+#old file 
+readme.md
