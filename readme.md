@@ -4,6 +4,9 @@ The Trading Alert System is a real-time, event-driven platform designed to assis
 
 This system is ideal for traders who rely on technical strategies and want to be notified when specific market conditions are fulfilled—without needing to constantly monitor charts.
 
+
+![](https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExd2hlcWtrcHlyYXMxeGg2ZXMzdWZqcHNwcmo3M2l4aTQzcDQ4MzhldyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/HHgLbMDYHNt0mo1Wdo/giphy.gif)
+
 ### 🧱 Tech Stack
 
 | Layer            | Technology/Tool                                     | Description                                                                 |
