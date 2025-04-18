@@ -1,0 +1,81 @@
+{% extends "dashboard/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="content-section">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h2>Notification Preferences</h2>
+    </div>
+    
+    {% if messages %}
+    <div class="messages mb-4">
+        {% for message in messages %}
+            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title mb-4">Configure how you receive trading alerts</h5>
+            
+            <form method="POST" id="notification-form">
+                {% csrf_token %}
+                
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Email Notifications</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group mb-3">
+                            {{ form.email_enabled|as_crispy_field }}
+                        </div>
+                        <div class="form-group mb-3">
+                            <label>Email Address</label>
+                            <p class="form-control-static">{{ user.email }}</p>
+                            <small class="text-muted">
+                                This email is from your user profile. Update your email in the 
+                                <a href="{% url 'profile' %}">Profile</a> page.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">SMS Notifications</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group mb-3">
+                            {{ form.sms_enabled|as_crispy_field }}
+                        </div>
+                        <div class="form-group mb-3">
+                            {{ form.phone_number|as_crispy_field }}
+                            <small class="text-muted">Enter phone number in international format (e.g., +1234567890)</small> <br>
+                            <small class="text">This service is not been set up by the devloper yet lol</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Notification Frequency</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group mb-3">
+                            {{ form.notification_frequency|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group mt-4">
+                    <button class="btn btn-primary" type="submit">Save Preferences</button>
+                    <a class="btn btn-outline-secondary" href="{% url 'dashboard-home' %}">Back to Dashboard</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock content %} 

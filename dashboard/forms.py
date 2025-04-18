@@ -1,5 +1,5 @@
 from django import forms
-from .models import Alert, StockGroup, Stock, Indicator
+from .models import Alert, StockGroup, Stock, Indicator, UserNotificationPreferences
 import json
 
 class StockGroupForm(forms.ModelForm):
@@ -113,3 +113,24 @@ class AlertForm(forms.ModelForm):
             self.add_error('stock_group', 'This field is required for multiple stock alerts.')
         
         return cleaned_data
+
+class UserNotificationPreferencesForm(forms.ModelForm):
+    """Form for user notification preferences"""
+    
+    class Meta:
+        model = UserNotificationPreferences
+        fields = ['email_enabled', 'sms_enabled', 'phone_number', 'notification_frequency']
+        widgets = {
+            'notification_frequency': forms.Select(attrs={'class': 'form-control'}),
+            'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+1234567890'})
+        }
+        
+    def clean_phone_number(self):
+        """Validate phone number when SMS is enabled"""
+        phone_number = self.cleaned_data.get('phone_number')
+        sms_enabled = self.cleaned_data.get('sms_enabled')
+        
+        if sms_enabled and not phone_number:
+            raise forms.ValidationError("Phone number is required when SMS notifications are enabled")
+        
+        return phone_number

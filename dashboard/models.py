@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 
 class Stock(models.Model):
     symbol = models.CharField(max_length=10, unique=True)
@@ -23,6 +25,45 @@ class Indicator(models.Model):
 
     def __str__(self):
         return self.name
+
+class UserNotificationPreferences(models.Model):
+    """User notification preferences"""
+    FREQUENCY_CHOICES = [
+        ('immediate', 'Immediate'),
+        ('daily', 'Daily Digest'),
+        ('weekly', 'Weekly Digest'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='notification_preferences')
+    email_enabled = models.BooleanField(default=True, help_text="Enable email notifications")
+    sms_enabled = models.BooleanField(default=False, help_text="Enable SMS notifications")
+    phone_number = models.CharField(max_length=20, blank=True, null=True, help_text="Phone number for SMS notifications")
+    notification_frequency = models.CharField(
+        max_length=20, 
+        choices=FREQUENCY_CHOICES,
+        default='immediate',
+        help_text="How frequently notifications should be sent"
+    )
+    
+    def __str__(self):
+        return f"{self.user.username}'s notification preferences"
+        
+    def clean(self):
+        """Validate the model"""
+        if self.sms_enabled and not self.phone_number:
+            raise ValidationError({
+                'phone_number': 'Phone number is required when SMS notifications are enabled'
+            })
+            
+    def save(self, *args, **kwargs):
+        """Override save to ensure clean is called"""
+        self.clean()
+        return super().save(*args, **kwargs)
+    
+    @property
+    def email_address(self):
+        """Get the user's email address from their profile"""
+        return self.user.email
 
 class Alert(models.Model):
     ALERT_TYPE_CHOICES = [

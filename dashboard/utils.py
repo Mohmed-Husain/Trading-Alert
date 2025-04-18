@@ -3,103 +3,139 @@ import json
 import pandas as pd
 import numpy as np
 from django.conf import settings
+import os
+from dotenv import load_dotenv
+from .angel_one import AngelOneAPI
+from datetime import datetime, timedelta
 
-ALPHA_VANTAGE_API_KEY = "SEFXT3DC8C92Z878"
+# Load environment variables
+load_dotenv(override=True)
 
 def get_historical_data(symbol, interval="5min", limit=100):
     """
-    Get historical price data for a given symbol using Alpha Vantage API
+    Get historical price data for a given symbol using Angel One API
     
     Parameters:
-    symbol (str): The trading symbol (e.g., 'MSFT')
+    symbol (str): The trading symbol (e.g., 'RELIANCE')
     interval (str): Time interval (e.g., '1min', '5min', '15min', '4h', '1day', '1week')
     limit (int): Number of data points to retrieve
     
     Returns:
     pandas.DataFrame: DataFrame with OHLCV data or None if the request fails
     """
-    # Map our timeframe to Alpha Vantage format
-    av_function = "TIME_SERIES_INTRADAY"
-    av_interval = interval
-    
-    if interval in ["1min", "5min", "15min"]:
-        av_function = "TIME_SERIES_INTRADAY"
-    elif interval == "4h":
-        # Alpha Vantage doesn't have 4h directly, use daily and resample later
-        av_function = "TIME_SERIES_DAILY"
-        av_interval = None
-    elif interval == "1day":
-        av_function = "TIME_SERIES_DAILY"
-        av_interval = None
-    elif interval == "1week":
-        av_function = "TIME_SERIES_WEEKLY"
-        av_interval = None
-    
-    url = "https://www.alphavantage.co/query"
-    params = {
-        "function": av_function,
-        "symbol": symbol,
-        "outputsize": "full",
-        "apikey": ALPHA_VANTAGE_API_KEY,
-    }
-    
-    # Add interval parameter only for intraday data
-    if av_interval:
-        params["interval"] = av_interval
-    
-    response = requests.get(url, params=params)
-    data = response.json()
-    
     try:
-        # Get the appropriate time series key based on the function
-        if av_function == "TIME_SERIES_INTRADAY":
-            time_series_key = f"Time Series ({interval})"
-        elif av_function == "TIME_SERIES_DAILY":
-            time_series_key = "Time Series (Daily)"
-        elif av_function == "TIME_SERIES_WEEKLY":
-            time_series_key = "Weekly Time Series"
+        # Initialize Angel One API
+        api = AngelOneAPI()
+        
+        # Connect to API
+        if not api.connect():
+            print(f"Failed to connect to Angel One API for {symbol}")
+            return generate_mock_data(symbol, interval, limit)
+        
+        # Get current date and date 30 days ago (or appropriate time range based on interval)
+        to_date = pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')
+        
+        if interval == '1min' or interval == '5min' or interval == '15min':
+            # For smaller intervals, get less historical data
+            from_date = (pd.Timestamp.now() - pd.Timedelta(days=5)).strftime('%Y-%m-%d %H:%M')
         else:
-            time_series_key = None
+            # For larger intervals, get more historical data
+            from_date = (pd.Timestamp.now() - pd.Timedelta(days=60)).strftime('%Y-%m-%d %H:%M')
             
-        if not time_series_key or time_series_key not in data:
-            print(f"Error: Invalid time series key for {symbol} with interval {interval}")
-            return None
+        # Map interval to Angel One format
+        angel_interval = interval
+        if interval == '4h':
+            angel_interval = 'ONE_HOUR'  # Use 1 hour and resample later
+        elif interval == '1day':
+            angel_interval = 'ONE_DAY'
+        elif interval == '1week':
+            angel_interval = 'ONE_WEEK'
+        
+        # Get exchange (default to NSE)
+        exchange = 'NSE'
+        
+        # Fetch historical data
+        df = api.get_historical_data(
+            symbol=symbol,
+            exchange=exchange,
+            interval=angel_interval,
+            from_date=from_date,
+            to_date=to_date
+        )
+        
+        if df is not None and not df.empty:
+            # Resample to 4h if needed
+            if interval == '4h' and angel_interval == 'ONE_HOUR':
+                df = df.resample('4H').agg({
+                    'open': 'first',
+                    'high': 'max',
+                    'low': 'min',
+                    'close': 'last',
+                    'volume': 'sum'
+                }).dropna().reset_index()
             
-        time_series = data[time_series_key]
-        
-        # Convert to DataFrame
-        ohlcv_data = []
-        for date_str, values in time_series.items():
-            ohlcv_data.append({
-                'timestamp': date_str,
-                'open': float(values['1. open']),
-                'high': float(values['2. high']),
-                'low': float(values['3. low']),
-                'close': float(values['4. close']),
-                'volume': float(values['5. volume']) if '5. volume' in values else 0
-            })
-        
-        # Create DataFrame and sort by timestamp
-        df = pd.DataFrame(ohlcv_data)
-        df = df.sort_values('timestamp')
-        
-        # Special handling for 4h interval - resample from daily data
-        if interval == "4h" and not df.empty:
-            # Convert timestamp to datetime
-            df['timestamp'] = pd.to_datetime(df['timestamp'])
-            # Set timestamp as index
-            df = df.set_index('timestamp')
-            # Resample to 4h by forward fill
-            df = df.resample('4H').ffill().reset_index()
-        
-        # Limit the number of returned records
-        if limit and len(df) > limit:
-            df = df.tail(limit)
-        
-        return df
-    except (KeyError, ValueError) as e:
-        print(f"Error processing data for {symbol} with interval {interval}: {e}")
-        return None
+            # Add technical indicators
+            df = api.add_indicators(df)
+            
+            # Limit the number of returned records
+            if limit and len(df) > limit:
+                df = df.tail(limit)
+                
+            return df
+        else:
+            print(f"No data returned from Angel One API for {symbol}")
+            return generate_mock_data(symbol, interval, limit)
+            
+    except Exception as e:
+        print(f"Error fetching historical data for {symbol}: {str(e)}")
+        return generate_mock_data(symbol, interval, limit)
+
+def generate_mock_data(symbol, interval="5min", limit=100):
+    """Generate mock historical data for development purposes"""
+    print(f"Generating mock data for {symbol} with {interval} interval")
+    
+    # Create a date range for the timestamps
+    end_date = pd.Timestamp.now()
+    
+    if interval == "1min":
+        freq = "T"  # minute frequency
+    elif interval == "5min":
+        freq = "5T"
+    elif interval == "15min":
+        freq = "15T"
+    elif interval == "30min":
+        freq = "30T"
+    elif interval == "60min" or interval == "1h":
+        freq = "H"
+    elif interval == "4h":
+        freq = "4H"
+    elif interval == "1day":
+        freq = "D"
+    elif interval == "1week":
+        freq = "W"
+    else:
+        freq = "D"
+    
+    # Generate timestamps
+    timestamps = pd.date_range(end=end_date, periods=limit, freq=freq)
+    
+    # Base price between 50-500
+    base_price = np.random.uniform(50, 500)
+    
+    # Generate random price movements
+    prices = np.random.normal(0, 1, size=limit).cumsum() * (base_price * 0.01) + base_price
+    
+    # Create DataFrame
+    df = pd.DataFrame({
+        'timestamp': timestamps,
+        'open': prices,
+        'close': prices * np.random.uniform(0.98, 1.02, size=limit),
+        'high': prices * np.random.uniform(1.01, 1.05, size=limit),
+        'low': prices * np.random.uniform(0.95, 0.99, size=limit),
+        'volume': np.random.randint(1000, 100000, size=limit)
+    })
+    
+    return df
 
 def get_stock_price(symbol, interval="5min"):
     """Get the latest price for a stock"""

@@ -1,6 +1,7 @@
 from django.core.mail import send_mail
 from .models import Alert, Stock
 from .utils import get_historical_data, calculate_indicator, check_crossover
+from .notifications import NotificationManager
 import json
 
 def check_alerts():
@@ -28,9 +29,9 @@ def check_single_stock_alert(alert):
         )
         
         if is_triggered:
-            # Send notification
-            send_email_notification(
-                alert.user.email, 
+            # Send notification using the notification manager
+            send_alert_notification(
+                alert.user, 
                 alert, 
                 alert.stock.symbol,
                 indicator1_value, 
@@ -69,8 +70,8 @@ def check_multiple_stocks_alert(alert):
     
     # If any stock triggered the alert, send notification
     if triggered_stocks:
-        send_multiple_stocks_notification(
-            alert.user.email,
+        send_multiple_stocks_alert_notification(
+            alert.user,
             alert,
             trigger_details
         )
@@ -100,13 +101,14 @@ def check_alert_conditions(historical_data, alert):
     
     return is_triggered, indicator1_value, indicator2_value
 
-def send_email_notification(email, alert, symbol, indicator1_value, indicator2_value):
+def send_alert_notification(user, alert, symbol, indicator1_value, indicator2_value):
+    """Send notification to user based on their preferences"""
     subject = f"Trading Alert Triggered for {symbol}"
     
     # Get indicator names and parameters in a readable format
     indicator1_str, indicator2_str, condition_str = format_alert_condition(alert)
     
-    message = f"Hello {alert.user.username},\n\n" \
+    message = f"Hello {user.username},\n\n" \
               f"Your alert for {symbol} has been triggered.\n\n" \
               f"Condition: {indicator1_str} {condition_str} {indicator2_str}\n" \
               f"Current {indicator1_str} value: {indicator1_value:.4f}\n" \
@@ -114,15 +116,18 @@ def send_email_notification(email, alert, symbol, indicator1_value, indicator2_v
               f"Timeframe: {alert.timeframe}\n\n" \
               f"Check your dashboard for more details."
     
-    send_mail(subject, message, "noreply@tradingalerts.com", [email])
+    # Use NotificationManager to send notification based on user preferences
+    notifier = NotificationManager()
+    return notifier.notify_user(user, subject, message)
 
-def send_multiple_stocks_notification(email, alert, trigger_details):
+def send_multiple_stocks_alert_notification(user, alert, trigger_details):
+    """Send notification for multiple stocks alert based on user preferences"""
     subject = f"Trading Alert Triggered for Multiple Stocks"
     
     # Get indicator names and parameters in a readable format
     indicator1_str, indicator2_str, condition_str = format_alert_condition(alert)
     
-    message = f"Hello {alert.user.username},\n\n" \
+    message = f"Hello {user.username},\n\n" \
               f"Your group alert for {alert.stock_group.name} has been triggered by the following stocks:\n\n"
               
     for detail in trigger_details:
@@ -134,7 +139,9 @@ def send_multiple_stocks_notification(email, alert, trigger_details):
     message += f"Timeframe: {alert.timeframe}\n\n" \
                f"Check your dashboard for more details."
     
-    send_mail(subject, message, "noreply@tradingalerts.com", [email])
+    # Use NotificationManager to send notification based on user preferences
+    notifier = NotificationManager()
+    return notifier.notify_user(user, subject, message)
 
 def format_alert_condition(alert):
     """Format the alert condition components for display"""

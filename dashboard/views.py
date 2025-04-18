@@ -2,8 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.contrib import messages
-from .models import Alert, StockGroup
-from .forms import AlertForm, StockGroupForm
+from .models import Alert, StockGroup, UserNotificationPreferences
+from .forms import AlertForm, StockGroupForm, UserNotificationPreferencesForm
 
 @login_required
 def home(request):
@@ -42,6 +42,46 @@ def delete_alert(request, alert_id):
     
     # Redirect back to the dashboard
     return redirect('dashboard-home')
+
+@login_required
+def notification_preferences(request):
+    """View for users to manage their notification preferences"""
+    # Try to get existing preferences or create new ones
+    try:
+        preferences = UserNotificationPreferences.objects.get(user=request.user)
+    except UserNotificationPreferences.DoesNotExist:
+        # Create default preferences
+        preferences = UserNotificationPreferences(
+            user=request.user,
+            email_enabled=True,
+            sms_enabled=False,
+            notification_frequency='immediate'
+        )
+        preferences.save()
+        
+    if request.method == 'POST':
+        form = UserNotificationPreferencesForm(request.POST, instance=preferences)
+        if form.is_valid():
+            # Apply the form data to the instance
+            preferences = form.save(commit=False)
+            # Ensure the user field is set
+            preferences.user = request.user
+            # Save to database
+            preferences.save()
+            messages.success(request, 'Notification preferences updated successfully!')
+            return redirect('dashboard-home')  # Redirect to home page after saving
+        else:
+            # If form is invalid, show errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"Error in {field}: {error}")
+    else:
+        form = UserNotificationPreferencesForm(instance=preferences)
+        
+    return render(request, 'dashboard/notification_preferences.html', {
+        'form': form,
+        'title': 'Notification Preferences'
+    })
 
 @login_required
 def stock_group_list(request):
