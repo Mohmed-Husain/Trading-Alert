@@ -1,6 +1,24 @@
 # Trading Alert System
 
-This is a trading alert system that integrates with Angel One API to fetch market data, calculate technical indicators, and generate trading alerts based on predefined conditions.
+The Trading Alert System is a real-time, event-driven platform designed to assist traders by generating timely alerts based on technical analysis. It seamlessly integrates with the Angel One SmartAPI to fetch live market data (such as candlestick data), processes it to calculate a variety of technical indicators, and triggers alerts when predefined trading conditions are met.
+
+This system is ideal for traders who rely on technical strategies and want to be notified when specific market conditions are fulfilled—without needing to constantly monitor charts.
+
+### 🧱 Tech Stack
+
+| Layer            | Technology/Tool                                     | Description                                                                 |
+|------------------|------------------------------------------------------|-----------------------------------------------------------------------------|
+| **Backend**       | Django                                               | Core web framework handling business logic, routing, and APIs              |
+|                  | Celery + Redis                                       | For scheduling and running background tasks (e.g., checking alerts)        |
+|                  | Angel One SmartAPI                                   | Fetches real-time stock/candle data                                        |
+| **Data Processing** | Pandas, NumPy                                      | Indicator calculation and data manipulation                                |
+| **Frontend**      | HTML, CSS, JavaScript, Bootstrap                     | Simple user dashboard for configuration and alerts                         |
+| **Email**         | SMTP (via Django)                                    | Sending real-time alert notifications to users                             |
+| **Database**      | SQLite (for local dev)                               | Stores user data, alert configurations, etc.                               |
+<!-- | **Deployment**    | AWS EC2 / Render / Railway (based on project needs) | Hosting the Django app                                                     | -->
+| **Version Control**| Git & GitHub                                        | Code management and collaboration                                          |
+<!-- | **Others**        | dotenv, logging, gunicorn, Nginx (for production)    | Environment and production setup                                           | -->
+
 
 ## Features
 
