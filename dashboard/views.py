@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.contrib import messages
-from .models import Alert, StockGroup, UserNotificationPreferences
+from .models import Alert, StockGroup, UserNotificationPreferences, AlertLog
 from .forms import AlertForm, StockGroupForm, UserNotificationPreferencesForm
 
 @login_required
@@ -135,3 +135,24 @@ def stock_group_delete(request, group_id):
         return redirect('stock-group-list')
     
     return render(request, 'dashboard/stock_group_confirm_delete.html', {'group': group})
+
+@login_required
+def alerts_view(request):
+    # Get all alerts for the user
+    all_alerts = Alert.objects.filter(user=request.user)
+    
+    # Separate active and triggered alerts
+    active_alerts = all_alerts.filter(is_active=True)
+    triggered_alerts = all_alerts.filter(is_active=False)
+    
+    # Get alert logs
+    alert_logs = AlertLog.objects.filter(alert__user=request.user)[:50]  # Limit to last 50 logs
+    
+    context = {
+        'active_alerts': active_alerts,
+        'triggered_alerts': triggered_alerts,
+        'all_alerts': all_alerts,
+        'alert_logs': alert_logs,
+    }
+    
+    return render(request, 'dashboard/alerts.html', context)

@@ -105,3 +105,23 @@ class Alert(models.Model):
             raise ValidationError("Single stock alert must have a stock selected")
         elif self.alert_type == 'multiple' and not self.stock_group:
             raise ValidationError("Multiple stocks alert must have a stock group selected")
+
+class AlertLog(models.Model):
+    EVENT_TYPES = [
+        ('created', 'Created'),
+        ('triggered', 'Triggered'),
+        ('deleted', 'Deleted'),
+        ('modified', 'Modified'),
+    ]
+    
+    alert = models.ForeignKey(Alert, on_delete=models.CASCADE, related_name='logs')
+    event_type = models.CharField(max_length=20, choices=EVENT_TYPES)
+    stock_symbol = models.CharField(max_length=10)
+    details = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-timestamp']
+    
+    def __str__(self):
+        return f"{self.stock_symbol} - {self.event_type} at {self.timestamp}"

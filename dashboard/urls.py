@@ -7,6 +7,7 @@ from django.http import request
 
 urlpatterns=[
     path('', views.home, name='dashboard-home'),
+    path('alerts/', views.alerts_view, name='alerts'),
     path('delete/<int:alert_id>/', views.delete_alert, name='delete-alert'),
     path('notification-preferences/', views.notification_preferences, name='notification-preferences'),
     path('stock-groups/', views.stock_group_list, name='stock-group-list'),
