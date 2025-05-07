@@ -1,81 +1,137 @@
 {% extends "dashboard/base.html" %}
 {% load crispy_forms_tags %}
+{% load static %}
 
 {% block content %}
-<div class="content-section">
-    <div class="d-flex align-items-center justify-content-between mb-4">
-        <h2>Notification Preferences</h2>
-    </div>
-    
-    {% if messages %}
-    <div class="messages mb-4">
-        {% for message in messages %}
-            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}">
-                {{ message }}
-            </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-    
-    <div class="card">
-        <div class="card-body">
-            <h5 class="card-title mb-4">Configure how you receive trading alerts</h5>
-            
-            <form method="POST" id="notification-form">
-                {% csrf_token %}
-                
-                <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Email Notifications</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group mb-3">
-                            {{ form.email_enabled|as_crispy_field }}
-                        </div>
-                        <div class="form-group mb-3">
-                            <label>Email Address</label>
-                            <p class="form-control-static">{{ user.email }}</p>
-                            <small class="text-muted">
-                                This email is from your user profile. Update your email in the 
-                                <a href="{% url 'profile' %}">Profile</a> page.
-                            </small>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">SMS Notifications</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group mb-3">
-                            {{ form.sms_enabled|as_crispy_field }}
-                        </div>
-                        <div class="form-group mb-3">
-                            {{ form.phone_number|as_crispy_field }}
-                            <small class="text-muted">Enter phone number in international format (e.g., +1234567890)</small> <br>
-                            <small class="text">This service is not been set up by the devloper yet lol</small>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Notification Frequency</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group mb-3">
-                            {{ form.notification_frequency|as_crispy_field }}
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-group mt-4">
-                    <button class="btn btn-primary" type="submit">Save Preferences</button>
-                    <a class="btn btn-outline-secondary" href="{% url 'dashboard-home' %}">Back to Dashboard</a>
-                </div>
-            </form>
-        </div>
-    </div>
+
+<!-- Header Section -->
+<div class="flex justify-between items-center mb-6" data-aos="fade-down">
+    <h1 class="text-3xl font-bold text-gray-800">Notification Preferences</h1>
+    <a href="{% url 'dashboard-home' %}" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition duration-150 ease-in-out flex items-center">
+        <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+    </a>
 </div>
-{% endblock content %} 
+
+<!-- Notification Preferences Form -->
+<div class="bg-white rounded-lg shadow-lg p-6" data-aos="fade-up">
+    <form method="POST" class="space-y-6">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Email Notifications -->
+            <div class="space-y-4">
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900">Email Notifications</h3>
+                        <p class="text-sm text-gray-500">Receive alerts via email</p>
+                    </div>
+                    <div class="relative inline-block w-12 h-6 transition duration-200 ease-in-out rounded-full">
+                        {{ form.email_enabled }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SMS Notifications -->
+            <div class="space-y-4">
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900">SMS Notifications</h3>
+                        <p class="text-sm text-gray-500">Receive alerts via SMS</p>
+                    </div>
+                    <div class="relative inline-block w-12 h-6 transition duration-200 ease-in-out rounded-full">
+                        {{ form.sms_enabled }}
+                    </div>
+                </div>
+                
+                <div id="phone-number-group" class="{% if not form.sms_enabled.value %}hidden{% endif %}">
+                    <label for="{{ form.phone_number.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Phone Number
+                    </label>
+                    <div class="mt-1">
+                        {{ form.phone_number }}
+                    </div>
+                    {% if form.phone_number.errors %}
+                        <div class="text-red-600 text-sm mt-1">
+                            {% for error in form.phone_number.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <p class="mt-1 text-sm text-gray-500">Include country code (e.g., +1 for US)</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notification Frequency -->
+        <div class="border-t border-gray-200 pt-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Notification Frequency</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for value, label in form.notification_frequency.field.choices %}
+                    <label class="relative flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition duration-150 ease-in-out {% if form.notification_frequency.value == value %}border-blue-500 bg-blue-50{% else %}border-gray-200{% endif %}">
+                        <input type="radio" name="{{ form.notification_frequency.name }}" value="{{ value }}"
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                               {% if form.notification_frequency.value == value %}checked{% endif %}>
+                        <span class="ml-3">
+                            <span class="block text-sm font-medium text-gray-900">{{ label }}</span>
+                            <span class="block text-xs text-gray-500">
+                                {% if value == 'immediate' %}
+                                    Get notified as soon as alerts trigger
+                                {% elif value == 'daily' %}
+                                    Receive a daily summary of all alerts
+                                {% else %}
+                                    Get a weekly digest of all alerts
+                                {% endif %}
+                            </span>
+                        </span>
+                    </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="flex justify-end">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-150 ease-in-out flex items-center">
+                <i class="fas fa-save mr-2"></i>Save Preferences
+            </button>
+        </div>
+    </form>
+</div>
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const smsEnabled = document.querySelector('#{{ form.sms_enabled.id_for_label }}');
+        const phoneNumberGroup = document.getElementById('phone-number-group');
+        
+        function updatePhoneNumberVisibility() {
+            if (smsEnabled.checked) {
+                phoneNumberGroup.classList.remove('hidden');
+            } else {
+                phoneNumberGroup.classList.add('hidden');
+            }
+        }
+        
+        // Initial setup
+        updatePhoneNumberVisibility();
+        
+        // Update on change
+        smsEnabled.addEventListener('change', updatePhoneNumberVisibility);
+        
+        // Style form elements
+        const phoneInput = document.querySelector('#{{ form.phone_number.id_for_label }}');
+        if (phoneInput) {
+            phoneInput.classList.add('mt-1', 'block', 'w-full', 'rounded-md', 'border-gray-300', 'shadow-sm', 
+                                   'focus:border-blue-500', 'focus:ring-blue-500', 'sm:text-sm');
+        }
+    });
+</script>
+{% endblock %}
+
+{% endblock %} 

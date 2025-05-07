@@ -2,61 +2,71 @@
 {% load static %}
 {% block content %}
 
-<h2>My Stock Groups</h2>
-
-<div class="mb-4">
-    <a href="{% url 'stock-group-create' %}" class="btn btn-success">
-        Create New Stock Group
-    </a>
-    <a href="{% url 'dashboard-home' %}" class="btn btn-secondary">
-        Back to Dashboard
+<!-- Header Section -->
+<div class="flex justify-between items-center mb-6" data-aos="fade-down">
+    <h1 class="text-3xl font-bold text-gray-800">Stock Groups</h1>
+    <a href="{% url 'stock-group-create' %}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-150 ease-in-out flex items-center">
+        <i class="fas fa-plus mr-2"></i>Create New Group
     </a>
 </div>
 
-{% if messages %}
-    <div class="messages">
-        {% for message in messages %}
-            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
-                {{ message }}
+<!-- Stock Groups List -->
+<div class="bg-white rounded-lg shadow-lg p-6" data-aos="fade-up">
+    {% if stock_groups %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for group in stock_groups %}
+                <div class="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition duration-150 ease-in-out">
+                    <div class="p-4">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-lg font-semibold text-gray-800">{{ group.name }}</h3>
+                            <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                                {{ group.stocks.count }} stocks
+                            </span>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h4 class="text-sm font-medium text-gray-600 mb-2">Stocks in Group:</h4>
+                            <div class="flex flex-wrap gap-2">
+                                {% for stock in group.stocks.all %}
+                                    <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm">
+                                        {{ stock.symbol }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center pt-4 border-t border-gray-100">
+                            <span class="text-sm text-gray-500">
+                                Created {{ group.created_at|date:"M d, Y" }}
+                            </span>
+                            <div class="flex space-x-2">
+                                <a href="{% url 'stock-group-update' group.id %}" 
+                                   class="text-blue-600 hover:text-blue-800 transition duration-150 ease-in-out">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'stock-group-delete' group.id %}" 
+                                   class="text-red-600 hover:text-red-800 transition duration-150 ease-in-out">
+                                    <i class="fas fa-trash-alt"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-12">
+            <div class="text-gray-400 mb-4">
+                <i class="fas fa-layer-group text-6xl"></i>
             </div>
-        {% endfor %}
-    </div>
-{% endif %}
-
-{% if stock_groups %}
-<table class="table table-bordered">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Stocks</th>
-            <th>Created</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for group in stock_groups %}
-        <tr>
-            <td>{{ group.name }}</td>
-            <td>
-                <ul>
-                {% for stock in group.stocks.all %}
-                    <li>{{ stock.name }} ({{ stock.symbol }})</li>
-                {% endfor %}
-                </ul>
-            </td>
-            <td>{{ group.created_at|date:"M d, Y" }}</td>
-            <td>
-                <a href="{% url 'stock-group-update' group.id %}" class="btn btn-sm btn-primary">Edit</a>
-                <a href="{% url 'stock-group-delete' group.id %}" class="btn btn-sm btn-danger">Delete</a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% else %}
-<div class="alert alert-info">
-    You don't have any stock groups yet. Create one to set up alerts for multiple stocks at once.
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No Stock Groups Yet</h3>
+            <p class="text-gray-500 mb-6">Create your first stock group to start monitoring multiple stocks together.</p>
+            <a href="{% url 'stock-group-create' %}" 
+               class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition duration-150 ease-in-out">
+                <i class="fas fa-plus mr-2"></i>Create Stock Group
+            </a>
+        </div>
+    {% endif %}
 </div>
-{% endif %}
 
 {% endblock %} 

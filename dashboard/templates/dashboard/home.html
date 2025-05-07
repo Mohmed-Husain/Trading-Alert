@@ -2,216 +2,328 @@
 {% load static %}
 {% block content %}
 
-
-
-<div class="tradingview-widget-container mt-4">
-    <div id="tradingview_chart"></div>
-    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-    <script type="text/javascript">
-        new TradingView.widget({
-            "width": 980,
-            "height": 610,
-            "symbol": "BSE:SENSEX",  // Change this to the symbol you need
-            "interval": "D",
-            "timezone": "Etc/UTC",
-            "theme": "light",
-            "style": "1",
-            "locale": "en",
-            "toolbar_bg": "#f1f3f6",
-            "enable_publishing": false,
-            "allow_symbol_change": true,
-            "container_id": "tradingview_chart"
-        });
-    </script>
- </div> 
-    
-
- <div class="mb-4 mt-4">
-    <h2 class="d-inline-block">My Trading Alerts</h2>
-    <a href="{% url 'stock-group-list' %}" class="btn btn-primary float-right">
-        Manage Stock Groups
+<!-- Dashboard Header -->
+<div class="flex justify-between items-center mb-6" data-aos="fade-down">
+    <h1 class="text-3xl font-bold text-gray-800">Trading Dashboard</h1>
+    <a href="{% url 'stock-group-list' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-150 ease-in-out flex items-center">
+        <i class="fas fa-layer-group mr-2"></i>Manage Stock Groups
     </a>
 </div>
 
-{% if messages %}
-    <div class="messages mb-4">
-        {% for message in messages %}
-            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
-                {{ message }}
-            </div>
-        {% endfor %}
+<!-- Trading View Widget -->
+<div class="bg-white rounded-lg shadow-lg p-4 mb-6" data-aos="fade-up">
+    <div class="tradingview-widget-container">
+        <div id="tradingview_chart"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+        <script type="text/javascript">
+            new TradingView.widget({
+                "width": "100%",
+                "height": 610,
+                "symbol": "BSE:SENSEX",
+                "interval": "D",
+                "timezone": "Etc/UTC",
+                "theme": "light",
+                "style": "1",
+                "locale": "en",
+                "toolbar_bg": "#f1f3f6",
+                "enable_publishing": false,
+                "allow_symbol_change": true,
+                "container_id": "tradingview_chart",
+                "studies": [
+                    "RSI@tv-basicstudies",
+                    "MASimple@tv-basicstudies"
+                ]
+            });
+        </script>
     </div>
-{% endif %}
+</div>
 
-<!-- Alerts List -->
-<table border="1" class="table">
-    <thead>
-        <tr>
-            <th>Stock(s)</th>
-            <th>Indicator 1</th>
-            <th>Period</th>
-            <th>Condition</th>
-            <th>Indicator 2</th>
-            <th>Period</th>
-            <th>Timeframe</th>
-            <th>Status</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for alert in alerts %}
-        <tr>
-            <td>
-                {% if alert.alert_type == 'single' %}
-                    {{ alert.stock.symbol }}
-                {% else %}
-                    <strong>Group:</strong> {{ alert.stock_group.name }}
-                    <button class="btn btn-sm btn-info" type="button" data-toggle="collapse" data-target="#stocks-{{ alert.id }}">
-                        Show {{ alert.stock_group.stocks.count }} stocks
-                    </button>
-                    <div class="collapse mt-2" id="stocks-{{ alert.id }}">
-                        <ul class="list-unstyled">
-                            {% for stock in alert.stock_group.stocks.all %}
-                                <li>{{ stock.symbol }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                {% endif %}
-            </td>
-            <td>{{ alert.indicator1.name }}</td>
-            <td>
-                {% with params=alert.indicator1_params|safe %}
-                    {% if '{"period":' in params %}
-                        {{ params|cut:'{"period":'|cut:'}' }}
-                    {% else %}
-                        {{ params }}
-                    {% endif %}
-                {% endwith %}
-            </td>
-            <td>{{ alert.condition }}</td>
-            <td>{{ alert.indicator2.name }}</td>
-            <td>
-                {% with params=alert.indicator2_params|safe %}
-                    {% if '{"period":' in params %}
-                        {{ params|cut:'{"period":'|cut:'}' }}
-                    {% else %}
-                        {{ params }}
-                    {% endif %}
-                {% endwith %}
-            </td>
-            <td>{{ alert.timeframe }}</td>
-            <td>{% if alert.is_active %}Active{% else %}Triggered{% endif %}</td>
-            <td>
-                <a href="{% url 'delete-alert' alert.id %}" 
-                   onclick="return confirm('Are you sure you want to delete this alert?');"
-                   style="background-color: #ff4d4d; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px;">
-                    Delete
-                </a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
-<!-- Alert Creation Form -->
-<div class="card mt-4">
-    <div class="card-header">
-        <h3>Create New Alert</h3>
+<!-- Alerts Section -->
+<div class="bg-white rounded-lg shadow-lg p-6 mb-6" data-aos="fade-up">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold text-gray-800">My Trading Alerts</h2>
+        <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+            {{ alerts|length }} Active Alerts
+        </span>
     </div>
-    <div class="card-body">
-        <form method="POST">
-            {% csrf_token %}
-            
-            {% if form.non_field_errors %}
-                <div class="alert alert-danger">
+
+    <!-- Alerts Table -->
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock(s)</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Indicator 1</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Period</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Condition</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Indicator 2</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Period</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timeframe</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for alert in alerts %}
+                <tr class="hover:bg-gray-50 transition duration-150 ease-in-out">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if alert.alert_type == 'single' %}
+                            <span class="text-sm font-medium text-gray-900">{{ alert.stock.symbol }}</span>
+                        {% else %}
+                            <div class="flex flex-col">
+                                <span class="text-sm font-medium text-gray-900">Group: {{ alert.stock_group.name }}</span>
+                                <button class="text-blue-600 hover:text-blue-800 text-sm mt-1" onclick="toggleStocks('{{ alert.id }}')">
+                                    Show {{ alert.stock_group.stocks.count }} stocks
+                                </button>
+                                <div id="stocks-{{ alert.id }}" class="hidden mt-2">
+                                    <ul class="text-sm text-gray-600">
+                                        {% for stock in alert.stock_group.stocks.all %}
+                                            <li>{{ stock.symbol }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ alert.indicator1.name }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {% with params=alert.indicator1_params|safe %}
+                            {% if '{"period":' in params %}
+                                {{ params|cut:'{"period":'|cut:'}' }}
+                            {% else %}
+                                {{ params }}
+                            {% endif %}
+                        {% endwith %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            {% if alert.condition == 'above' %}bg-green-100 text-green-800
+                            {% elif alert.condition == 'below' %}bg-red-100 text-red-800
+                            {% else %}bg-blue-100 text-blue-800{% endif %}">
+                            {{ alert.condition }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ alert.indicator2.name }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {% with params=alert.indicator2_params|safe %}
+                            {% if '{"period":' in params %}
+                                {{ params|cut:'{"period":'|cut:'}' }}
+                            {% else %}
+                                {{ params }}
+                            {% endif %}
+                        {% endwith %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ alert.timeframe }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            {% if alert.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                            {% if alert.is_active %}Active{% else %}Triggered{% endif %}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <a href="{% url 'delete-alert' alert.id %}" 
+                           onclick="return confirm('Are you sure you want to delete this alert?');"
+                           class="text-red-600 hover:text-red-900 transition duration-150 ease-in-out">
+                            <i class="fas fa-trash-alt"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Create New Alert Form -->
+<div class="bg-white rounded-lg shadow-lg p-6" data-aos="fade-up">
+    <div class="flex items-center justify-between mb-6">
+        <h3 class="text-2xl font-bold text-gray-800 flex items-center">
+            <i class="fas fa-bell text-blue-600 mr-3"></i>
+            Create New Alert
+        </h3>
+        <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+            <i class="fas fa-info-circle mr-1"></i>
+            Configure your trading alerts
+        </span>
+    </div>
+
+    <form method="POST" class="space-y-6">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg" role="alert">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-circle mr-2"></i>
                     {% for error in form.non_field_errors %}
                         {{ error }}
                     {% endfor %}
                 </div>
-            {% endif %}
-            
-            <div class="form-group">
-                <label>Alert Type:</label>
-                <div>
-                    {{ form.alert_type }}
-                </div>
-                <small class="text-muted">{{ form.alert_type.help_text }}</small>
             </div>
-            
-            <div class="form-row">
-                <div class="form-group col-md-6" id="single-stock-group">
-                    <label for="{{ form.stock.id_for_label }}">Stock:</label>
-                    {{ form.stock }}
-                    {% if form.stock.errors %}
-                        <div class="text-danger">
-                            {% for error in form.stock.errors %}
-                                {{ error }}
-                            {% endfor %}
+        {% endif %}
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Left Column -->
+            <div class="space-y-6">
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="text-sm font-medium text-gray-700 mb-4 flex items-center">
+                        {% comment %} <i class="fas fa-cog text-blue-600 mr-2"></i> {% endcomment %}
+                        Alert Configuration
+                    </h4>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Alert Type</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    {% comment %} <i class="fas fa-bell text-gray-400"></i> {% endcomment %}
+                                </div>
+                                {{ form.alert_type }}
+                            </div>
+                            <p class="mt-1 text-sm text-gray-500">{{ form.alert_type.help_text }}</p>
                         </div>
-                    {% endif %}
-                </div>
-                
-                <div class="form-group col-md-6" id="stock-group-group" style="display: none;">
-                    <label for="{{ form.stock_group.id_for_label }}">Stock Group:</label>
-                    {{ form.stock_group }}
-                    {% if form.stock_group.errors %}
-                        <div class="text-danger">
-                            {% for error in form.stock_group.errors %}
-                                {{ error }}
-                            {% endfor %}
+                        
+                        <div id="single-stock-group" class="transition-all duration-300 ease-in-out">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Stock</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    {% comment %} <i class="fas fa-chart-line text-gray-400"></i> {% endcomment %}
+                                </div>
+                                {{ form.stock }}
+                            </div>
+                            {% if form.stock.errors %}
+                                <div class="text-red-600 text-sm mt-1 flex items-center">
+                                    {% comment %} <i class="fas fa-exclamation-circle mr-1"></i> {% endcomment %}
+                                    {% for error in form.stock.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
-                    {% endif %}
-                    {% if not stock_groups %}
-                        <small class="text-muted">
-                            No stock groups available. <a href="{% url 'stock-group-create' %}">Create a stock group</a> first.
-                        </small>
-                    {% endif %}
+                        
+                        <div id="stock-group-group" class="hidden transition-all duration-300 ease-in-out">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Stock Group</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    {% comment %} <i class="fas fa-layer-group text-gray-400"></i> {% endcomment %}
+                                </div>
+                                {{ form.stock_group }}
+                            </div>
+                            {% if form.stock_group.errors %}
+                                <div class="text-red-600 text-sm mt-1 flex items-center">
+                                    {% comment %} <i class="fas fa-exclamation-circle mr-1"></i> {% endcomment %}
+                                    {% for error in form.stock_group.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            {% if not stock_groups %}
+                                <div class="mt-2 p-3 bg-yellow-50 rounded-lg">
+                                    <p class="text-sm text-yellow-700 flex items-center">
+                                        {% comment %} <i class="fas fa-exclamation-triangle mr-2"></i> {% endcomment %}
+                                        No stock groups available. 
+                                        <a href="{% url 'stock-group-create' %}" class="text-blue-600 hover:text-blue-800 ml-1">
+                                            Create a stock group
+                                        </a>
+                                    </p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
             
-            <div class="form-row">
-                <div class="form-group col-md-6">
-                    <label for="{{ form.indicator1.id_for_label }}">Indicator 1:</label>
-                    {{ form.indicator1 }}
-                </div>
-                <div class="form-group col-md-6">
-                    <label for="{{ form.period1.id_for_label }}">Period:</label>
-                    {{ form.period1 }}
-                    <small class="text-muted">{{ form.period1.help_text }}</small>
+            <!-- Right Column -->
+            <div class="space-y-6">
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="text-sm font-medium text-gray-700 mb-4 flex items-center">
+                        {% comment %} <i class="fas fa-chart-bar text-blue-600 mr-2"></i> {% endcomment %}
+                        Technical Indicators
+                    </h4>
+                    
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Indicator 1</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        {% comment %} <i class="fas fa-chart-line text-gray-400"></i> {% endcomment %}
+                                    </div>
+                                    {{ form.indicator1 }}
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Period</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        {% comment %} <i class="fas fa-clock text-gray-400"></i> {% endcomment %}
+                                    </div>
+                                    {{ form.period1 }}
+                                </div>
+                                <p class="mt-1 text-sm text-gray-500">{{ form.period1.help_text }}</p>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Condition</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    {% comment %} <i class="fas fa-code-branch text-gray-400"></i> {% endcomment %}
+                                </div>
+                                {{ form.condition }}
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Indicator 2</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        {% comment %} <i class="fas fa-chart-line text-gray-400"></i> {% endcomment %}
+                                    </div>
+                                    {{ form.indicator2 }}
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Period</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        {% comment %} <i class="fas fa-clock text-gray-400"></i> {% endcomment %}
+                                    </div>
+                                    {{ form.period2 }}
+                                </div>
+                                <p class="mt-1 text-sm text-gray-500">{{ form.period2.help_text }}</p>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Timeframe</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    {% comment %} <i class="fas fa-calendar-alt text-gray-400"></i> {% endcomment %}
+                                </div>
+                                {{ form.timeframe }}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <div class="form-group">
-                <label for="{{ form.condition.id_for_label }}">Condition:</label>
-                {{ form.condition }}
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group col-md-6">
-                    <label for="{{ form.indicator2.id_for_label }}">Indicator 2:</label>
-                    {{ form.indicator2 }}
-                </div>
-                <div class="form-group col-md-6">
-                    <label for="{{ form.period2.id_for_label }}">Period:</label>
-                    {{ form.period2 }}
-                    <small class="text-muted">{{ form.period2.help_text }}</small>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="{{ form.timeframe.id_for_label }}">Timeframe:</label>
-                {{ form.timeframe }}
-            </div>
-            
-            <!-- Hidden fields -->
-            {{ form.indicator1_params }}
-            {{ form.indicator2_params }}
-            
-            <button type="submit" class="btn btn-success">Save Alert</button>
-        </form>
-    </div>
+        </div>
+        
+        <!-- Hidden fields -->
+        {{ form.indicator1_params }}
+        {{ form.indicator2_params }}
+        
+        <div class="flex justify-end pt-4">
+            <button type="submit" 
+                    class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg transition duration-150 ease-in-out flex items-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                <i class="fas fa-save mr-2"></i>
+                Create Alert
+            </button>
+        </div>
+    </form>
 </div>
 
+{% block scripts %}
 <script>
     // Show/hide appropriate fields based on alert type selection
     document.addEventListener('DOMContentLoaded', function() {
@@ -223,11 +335,11 @@
             const selectedType = document.querySelector('input[name="alert_type"]:checked').value;
             
             if (selectedType === 'single') {
-                singleStockGroup.style.display = 'block';
-                stockGroupGroup.style.display = 'none';
+                singleStockGroup.classList.remove('hidden');
+                stockGroupGroup.classList.add('hidden');
             } else {
-                singleStockGroup.style.display = 'none';
-                stockGroupGroup.style.display = 'block';
+                singleStockGroup.classList.add('hidden');
+                stockGroupGroup.classList.remove('hidden');
             }
         }
         
@@ -239,7 +351,26 @@
             input.addEventListener('change', updateVisibility);
         });
     });
+
+    // Toggle stocks visibility
+    function toggleStocks(alertId) {
+        const stocksDiv = document.getElementById(`stocks-${alertId}`);
+        stocksDiv.classList.toggle('hidden');
+    }
+
+    // Add smooth transitions
+    document.querySelectorAll('tr').forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.01)';
+            this.style.transition = 'transform 0.2s ease-in-out';
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+        });
+    });
 </script>
+{% endblock %}
 
 {% endblock %}
     
